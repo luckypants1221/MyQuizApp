@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:title="홈"
+        android:icon="@android:drawable/ic_menu_view" />
+    <item
+        android:id="@+id/nav_study"
+        android:title="학습"
+        android:icon="@android:drawable/ic_menu_edit" />
+    <item
+        android:id="@+id/nav_quiz"
+        android:title="퀴즈"
+        android:icon="@android:drawable/ic_menu_info_details" />
+    <item
+        android:id="@+id/nav_profile"
+        android:title="내 정보"
+        android:icon="@android:drawable/ic_menu_myplaces" />
+</menu>
