@@ -7,6 +7,8 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.data.model.SendCodeRequest
+import com.example.myapplication.data.model.VerifyCodeRequest
 import com.example.myapplication.data.remote.RetrofitClient
 import com.example.myapplication.databinding.ActivitySignUpBinding
 import kotlinx.coroutines.launch
@@ -106,7 +108,7 @@ class SignUpActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val response = RetrofitClient.authApiService.sendEmailCode(email)
+                val response = RetrofitClient.authApiService.sendEmailCode(SendCodeRequest(email))
                 if (response.isSuccessful) {
                     val msg = response.body()?.string() ?: "인증번호가 발송되었습니다."
                     binding.tvEmailMessage.text = msg
@@ -115,7 +117,8 @@ class SignUpActivity : AppCompatActivity() {
                     
                     // 타이머 시작 (3분 = 180초)
                     startTimer(180 * 1000L)
-                } else {
+                }
+                else {
                     val errorMsg = response.errorBody()?.string() ?: "발송 실패"
                     binding.tvEmailMessage.text = errorMsg
                     binding.tvEmailMessage.setTextColor(Color.RED)
@@ -160,7 +163,10 @@ class SignUpActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val response = RetrofitClient.authApiService.verifyEmailCode(email, code)
+                val request = VerifyCodeRequest(email, code) // DTO 사용
+
+                val response = RetrofitClient.authApiService.verifyEmailCode(request)
+
                 if (response.isSuccessful) {
                     val msg = response.body()?.string() ?: "인증 성공"
                     binding.tvVerificationMessage.text = msg
@@ -199,6 +205,7 @@ class SignUpActivity : AppCompatActivity() {
 
     private fun setupSignUpButton() {
         binding.btnSignUp.setOnClickListener {
+            // 1. 유효성 검사 (기존 코드)
             if (!isIdChecked) {
                 showToast("아이디 중복 확인이 필요합니다.")
                 return@setOnClickListener
@@ -207,10 +214,51 @@ class SignUpActivity : AppCompatActivity() {
                 showToast("이메일 인증이 필요합니다.")
                 return@setOnClickListener
             }
-            
-            // TODO: 실제 회원가입 API 호출
-            showToast("회원가입 요청 (구현 필요)")
-            // finish() // 성공 시
+
+            // 2. 입력값 가져오기
+            val userid = binding.etId.text.toString().trim()
+            val pw = binding.etPw.text.toString().trim()
+            val email = binding.etEmail.text.toString().trim()
+            val name = binding.etName.text.toString().trim()
+            val phone = binding.etPhone.text.toString().trim()
+            val pwConfirm = binding.etPwConfirm.text.toString().trim()
+
+            binding.btnSignUp.isEnabled = false // 중복 클릭 방지
+
+            if (userid.isEmpty() || pw.isEmpty() || pwConfirm.isEmpty() || name.isEmpty() || phone.isEmpty()) {
+                showToast("모든 정보를 입력해주세요.")
+                return@setOnClickListener
+            }
+
+            // 🔥 추가된 부분: 비밀번호 일치 검사
+            if (pw != pwConfirm) {
+                showToast("비밀번호가 일치하지 않습니다.")
+                return@setOnClickListener
+            }
+
+            // 3. 서버 요청
+            lifecycleScope.launch {
+                try {
+                    // DTO 객체가 아니라 파라미터를 하나씩 풀어서 보냄 (@Field 방식)
+                    val response = RetrofitClient.authApiService.registerMember(
+                        userid, pw, name, email, phone
+                    )
+
+                    if (response.isSuccessful) {
+                        showToast("회원가입 성공! 로그인 해주세요.")
+                        finish() // 가입 성공 시 화면 닫기
+                    } else {
+                        // 서버 에러 메시지 확인
+                        val errorMsg = response.errorBody()?.string() ?: "가입 실패"
+                        showToast("오류: $errorMsg")
+                        binding.btnSignUp.isEnabled = true
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    showToast("통신 오류: ${e.message}")
+                    binding.btnSignUp.isEnabled = true
+                }
+            }
         }
     }
     
